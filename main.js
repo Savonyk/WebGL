@@ -257,7 +257,7 @@ function createProgram(gl, vShader, fShader) {
  * initialization function that will be called when the page has loaded
  */
 function init() {
-    lightPositionEl = document.getElementById('lightPostion');
+    lightPositionEl = document.getElementById('light');
 
     let canvas;
     try {

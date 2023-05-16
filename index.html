@@ -2,7 +2,7 @@
 <html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 
-<title>PA#2</title>
+<title>PA#1</title>
 <style>
     body {
         background-color: #EEEEEE;
@@ -17,19 +17,46 @@
 </head>
 <body onload="init()">
 
-<h2>Practical assignment 2. "Drop"</h2>
+<h2>Practical assignment 1. "Drop"</h2>
 
-<div id="lightPostion">
-    <style>
-        #lightPostionX {
-            width: 600px;
-        }
-        </style>
-    <p>Angle light direction: 0 to 360<p>
-    <p>
-        <label for="lightPostionX">X:</label>
-        <input id="lightPostionX" type="range" min="0" max="360" step="1" onchange="Redraw()"/>
-    </p>
+<div>
+    <label for="typeOfSurface">Mode</label>
+    <input name="typeOfSurface" type="checkbox" id="SurfaceType" checked onchange="Redraw()">
+</div>
+
+<div id="light">
+    <p>Move light position from -50 to 50</p>
+    <label for="lightX">X:</label>
+    <input id="lightX" type="range" min="-50" max="50" step="1" onchange="Redraw()" />
+    <label for="lightY">Y:</label>
+    <input id="lightY" type="range" min="-50" max="50" step="2" onchange="Redraw()" />
+    <label for="lightZ">Z:</label>
+    <input id="lightZ" type="range" min="-50" max="50" step="2" onchange="Redraw()" />
+</div>
+
+<br/>
+
+<div>
+    <div>
+        <label for ="eyeSeparation">Eye separation</label>
+        <input id="eyeSeparation" type="range" min="0" max="200" step="4"  value="100">
+        <span class="slider-value">0</span>
+    </div>
+    <div>
+        <label for ="FOV">Field of View</label>
+        <input id="FOV" type="range" min="0.5" max="3.14" step="0.04" value="1.7">
+        <span class="slider-value">0</span>
+    </div>
+    <div>
+        <label for ="nearDistance">Near Clipping distance</label>
+        <input id="nearDistance" type="range" min="4" max="20" step="0.5" value="10" >
+        <span class="slider-value">0</span>
+    </div>
+    <div>
+        <label for ="convergence">Convergence</label>
+        <input id="convergence" type="range" min="500" max="2500" step="10" value="2000">
+        <span class="slider-value">0</span>
+    </div>
 </div>
 
 <div id="canvas-holder">
