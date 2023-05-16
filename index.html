@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+<title>PA#2</title>
+<style>
+    body {
+        background-color: #EEEEEE;
+    }
+</style>
+
+<script src="./Utils/trackball-rotator.js"></script>
+<script src="./Utils/m4.js"></script>
+<script src="./shader.gpu"></script>
+<script src="./main.js"></script>
+
+</head>
+<body onload="init()">
+
+<h2>Practical assignment 2. "Drop"</h2>
+
+<div id="lightPostion">
+    <style>
+        #lightPostionX {
+            width: 600px;
+        }
+        </style>
+    <p>Angle light direction: 0 to 360<p>
+    <p>
+        <label for="lightPostionX">X:</label>
+        <input id="lightPostionX" type="range" min="0" max="360" step="1" onchange="Redraw()"/>
+    </p>
+</div>
+
+<div id="canvas-holder">
+   <canvas width="600" height="600" id="webglcanvas" style="background-color:red"></canvas>
+</div>
+
+
+</body></html>
