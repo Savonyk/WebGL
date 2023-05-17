@@ -7,10 +7,6 @@ let spaceball;                  // A SimpleRotator object that lets the user rot
 let lightPositionEl;
 let height = 5;
 let p = 3;
-let plane;
-let video;
-let image;
-let track;
 let texture;
 let length;
 let surfaceType;
@@ -215,9 +211,7 @@ function draw() {
 
     /* Draw the six faces of a cube, with different colors. */
     gl.uniform4fv(shProgram.iColor, [0,0,0.8,1] );
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
-    plane.DrawTriangles();
+
     gl.uniform4fv(shProgram.iColor, [1,1,0,1] );
     gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, matAccumLeft);
     gl.uniformMatrix4fv(shProgram.iProjectionMatrix, false, leftProjection);
@@ -300,9 +294,6 @@ function initGL() {
     inputData.UpdateData();
     surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
-    plane = new Model("Plane");
-    plane.BufferData([0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0])
-    plane.TextureBufferData([1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1]);
     gl.enable(gl.DEPTH_TEST);
 }
 
@@ -348,11 +339,6 @@ function init() {
     try {
         canvas = document.getElementById("webglcanvas");
         gl = canvas.getContext("webgl");
-        video = document.createElement('video');
-        video.setAttribute('autoplay', true);
-        window.vid = video;
-        getCamera();
-        texture = CreateCameraTexture();
         if ( ! gl ) {
             throw "Browser does not support WebGL";
         }
@@ -376,35 +362,6 @@ function init() {
     Update();
 }
 
-function getCamera()
-{
-    navigator.getUserMedia({ video: true, audio: false }, function (stream) {
-        video.srcObject = stream;
-        track = stream.getTracks()[0];
-      }, function (e) {
-        console.error('Rejected!', e);
-      });
-}
-
-function CreateCameraTexture()
-{
-    let textureID = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, textureID);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.bindTexture(gl.TEXTURE_2D, textureID);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      video
-    );
-    return textureID;
-}
 
 function Update()
 {
