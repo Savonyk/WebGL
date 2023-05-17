@@ -2,16 +2,24 @@
 const vertexShaderSource = `
 attribute vec3 vertex;
 attribute vec3 normal;
+attribute vec2 texture;
 uniform mat4 ModelViewProjectionMatrix, normalMat;
+uniform mat4 ModelViewMatrix, ProjectionMatrix;
 varying vec3 normalInterp;
 varying vec3 vertPos;
+uniform vec4 color;
+varying vec2 texcoord;
 
 void main() {
-    vec4 vertPos4 = ModelViewProjectionMatrix * vec4(vertex, 1.0);
+    vec4 vertPos4 = ModelViewMatrix * vec4(vertex, 1.0);
     vertPos = vec3(vertPos4) / vertPos4.w;
     normalInterp = vec3(normalMat * vec4(normal, 0.0));
-    gl_Position = vertPos4;
-
+    gl_Position = ProjectionMatrix * vertPos4;
+   if(color.z>0.5)
+   {
+      texcoord = texture;
+       gl_Position = ModelViewProjectionMatrix * vec4(vertex, 1.0);
+   }
 }`;
 
 
@@ -23,8 +31,7 @@ const fragmentShaderSource = `
    precision mediump float;
 #endif
 
-varying vec4 color;
-precision mediump float;
+uniform vec4 color;
 varying vec3 normalInterp;  // Surface normal
 varying vec3 vertPos;       // Vertex position
 uniform float ambientCoefficient;   // Ambient reflection coefficient
@@ -35,6 +42,8 @@ uniform vec3 ambientColor;
 uniform vec3 diffuseColor;
 uniform vec3 specularColor;
 uniform vec3 lightPosition;
+varying vec2 texcoord;
+uniform sampler2D tmu;
 
 void main() {
   vec3 vNormal = normalize(normalInterp);
@@ -53,4 +62,8 @@ void main() {
                   + diffuseCoefficient * dotProduct * diffuseColor 
                   + specularCoefficient * specular * specularColor, 1.0);
 
+    if(color.z>0.5){
+    vec4 tex = texture2D(tmu, texcoord);
+    gl_FragColor = tex;
+    }
 }`;
