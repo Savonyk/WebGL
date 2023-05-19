@@ -4,14 +4,11 @@ let gl;                         // The webgl context.
 let surface;                    // A surface model
 let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
-let lightPositionEl;
 let height = 5;
 let p = 3;
-let texture;
 let length;
 let surfaceType;
 let inputData;
-
 let rotation = {x:0, y: 0, z:0};
 
 function GetRadiansFromDegree(angle) {
@@ -57,19 +54,6 @@ function Model(name) {
           }
         }
       };
-
-    this.DrawTriangles = function () {
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
-        gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(shProgram.iAttribVertex);
-    
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.iTextureCoordBuffer);
-        gl.vertexAttribPointer(shProgram.iAttribTexture, 2, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(shProgram.iAttribTexture);
-    
-        gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.count);
-      }
 }
 
 
@@ -79,29 +63,19 @@ function ShaderProgram(name, program) {
     this.name = name;
     this.prog = program;
 
-    // Location of the attribute variable in the shader program.
     this.iAttribVertex = -1;
     this.iAttribTexture = -1;
-    // Location of the uniform specifying a color for the primitive.
     this.iColor = -1;
-    // Location of the uniform matrix representing the combined transformation.
     this.iModelViewProjectionMatrix = -1;
-
-    // Normals
     this.iNormal = -1;
     this.iNormalMatrix = -1;
-
-    // Ambient, diffuse, specular
     this.iAmbientColor = -1;
     this.iDiffuseColor = -1;
     this.iSpecularColor = -1;
     this.iAmbientCoefficient = -1;
     this.iDiffuseCoefficient = -1;
     this.iSpecularCoefficient = -1;
-    // Shininess
     this.iShininess = -1;
-
-    // Light position
     this.iLightPos = -1;
 
     this.Use = function() {
@@ -162,15 +136,14 @@ function UpdateInputData()
     }
 }
 
-
 /* Draws a colored cube, along with a set of coordinate axes.
  * (Note that the use of the above drawPrimitive function is not an efficient
  * way to draw with WebGL.  Here, the geometry is so simple that it doesn't matter.)
  */
-function draw() { 
+function draw() {
     gl.clearColor(0,0,0,1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    /* Set the values of the projection transformation */
+
     let orthographic = m4.orthographic(0, 1, 0,1, -1, 1); 
     
     inputData.UpdateData();
@@ -179,7 +152,11 @@ function draw() {
     inputData.UpdateSidesForRightProjection();
     let rightProjection = m4.orthographic(inputData.left, inputData.right,  inputData.bottom, inputData.top, inputData.near, inputData.far);
 
-    let modelView = spaceball.getViewMatrix();
+    let modelView = m4.identity();
+    modelView = m4.xRotate(modelView, rotation.x);
+    modelView = m4.yRotate(modelView, rotation.y);
+    modelView = m4.zRotate(modelView, rotation.z);
+
     let rotateToPointZero = m4.axisRotation([0.707,0.707,0], 0);
     let translateToPointZero = m4.translation(0,0,0);
     let leftTranslate = m4.translation(-0.03, 0, -20);
@@ -210,10 +187,7 @@ function draw() {
     gl.uniform3fv(shProgram.iAmbientColor, [0.2, 0.1, 0.4]);
     gl.uniform3fv(shProgram.iDiffuseColor, [0.0, 0.8, 0.8]);
     gl.uniform3fv(shProgram.iSpecularColor, [1.0, 1.0, 1.0]);
-
-    /* Draw the six faces of a cube, with different colors. */
     gl.uniform4fv(shProgram.iColor, [0,0,0.8,1] );
-
     gl.uniform4fv(shProgram.iColor, [1,1,0,1] );
     gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, matAccumLeft);
     gl.uniformMatrix4fv(shProgram.iProjectionMatrix, false, leftProjection);
@@ -230,10 +204,11 @@ function draw() {
     gl.colorMask(true, true, true, true);
 }
 
+
+
 function GetCurrentZPosition(h){
     return Math.pow(Math.abs(h) - height, 2) / (2*p);
 }  
-
 // surface - parabolic humming-top
 // x = ((|z| - h)^2 / 2*p)) * cosB
 // y = ((|z| - h)^2 / 2*p)) * sinB
@@ -242,15 +217,16 @@ function CreateSurfaceData()
 {
     let vertexList = [];
 
-    const step = inputData.surfaceType.checked ? 0.2 : 1;
+    const stepU = inputData.surfaceType.checked ? 0.5 : 2;
+    const stepV = inputData.surfaceType.checked ? 0.5 : 1;
 
-    for (let u = 0; u < 360; u += step) 
+    for (let u = 0; u < 360; u += stepU) 
     {
-        for(let v = -height; v <= height; v += step)
+        for(let v = -height; v <= height; v += stepV)
         {
             let currentAngle = GetRadiansFromDegree(u);
             let currentTemp = GetCurrentZPosition(v);
-            let nextAngle = GetRadiansFromDegree(u + step);
+            let nextAngle = GetRadiansFromDegree(u + stepU);
 
             vertexList.push(currentTemp * Math.cos(currentAngle), v, currentTemp * Math.sin(currentAngle));
             vertexList.push(currentTemp * Math.cos(nextAngle), v, currentTemp * Math.sin(nextAngle));
@@ -258,7 +234,6 @@ function CreateSurfaceData()
     }
 
     length = 360;
-
     return vertexList;
 }
 
@@ -273,49 +248,28 @@ function initGL() {
     shProgram.iAttribTexture             = gl.getAttribLocation(prog, 'texture');
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
     shProgram.iModelViewMatrix           = gl.getUniformLocation(prog, "ModelViewMatrix");
-  shProgram.iProjectionMatrix            = gl.getUniformLocation(prog, "ProjectionMatrix");
+    shProgram.iProjectionMatrix            = gl.getUniformLocation(prog, "ProjectionMatrix");
     shProgram.iColor                     = gl.getUniformLocation(prog, "color");
-
     shProgram.iNormal                    = gl.getAttribLocation(prog, 'normal');
     shProgram.iNormalMatrix              = gl.getUniformLocation(prog, 'normalMat');
-
     shProgram.iAmbientColor              = gl.getUniformLocation(prog, 'ambientColor');
     shProgram.iDiffuseColor              = gl.getUniformLocation(prog, 'diffuseColor');
     shProgram.iSpecularColor             = gl.getUniformLocation(prog, 'specularColor');
-
     shProgram.iShininess                 = gl.getUniformLocation(prog, 'shininess');
-
     shProgram.iLightPos                  = gl.getUniformLocation(prog, 'lightPosition');
     shProgram.iSpecularCoefficient       = gl.getUniformLocation(prog, 'specularCoefficient');
     shProgram.iAmbientCoefficient        = gl.getUniformLocation(prog, 'ambientCoefficient');
     shProgram.iDiffuseCoefficient        = gl.getUniformLocation(prog, 'diffuseCoefficient');
-    shProgram.iTMU                       = gl.getUniformLocation(prog, 'tmu');
+    shProgram.iTMU                       = gl.getUniformLocation(prog, 'tmu'); 
+
+
     
-
-
-    navigator.permissions.query({ name: "accelerometer" }).then((result) => {
-        if (result.state === "denied") {
-          alert("Permission to use accelerometer sensor is denied.");
-          return;
-        }
-        // Use the sensor.
-      });
-
-    const acl = new Gyroscope({ frequency: 60 });
-    acl.addEventListener("reading", () => {
-    alert(`Gyroscope along the X-axis ${acl.x}`);
-    alert(`Gyroscope along the Y-axis ${acl.y}`);
-    alert(`Gyroscope along the Z-axis ${acl.z}`);
-});
-
-acl.start();
     inputData = new UpdateInputData();
     inputData.UpdateData();
     surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
     gl.enable(gl.DEPTH_TEST);
 }
-
 
 /* Creates a program for use in the WebGL context gl, and returns the
  * identifier for that program.  If an error occurs while compiling or
@@ -376,8 +330,15 @@ function init() {
         return;
     }
 
-    spaceball = new TrackballRotator(canvas, draw, 0);
 
+    window.addEventListener('devicemotion', (event) => {
+        let dt = 0.05;
+        rotation.x += GetRadiansFromDegree(event.rotationRate.beta) * dt;
+        rotation.y += GetRadiansFromDegree(event.rotationRate.gamma) * dt;
+        rotation.z += GetRadiansFromDegree(event.rotationRate.alpha) * dt;
+    })
+
+    spaceball = new TrackballRotator(canvas, draw, 0);
     Update();
 }
 
@@ -393,53 +354,3 @@ function Redraw() {
     draw();
 }
 
-function getRotationMatrixFromVector(rotationVector) {
-    let R = [];
-    let q0;
-    let q1 = rotationVector[0];
-    let q2 = rotationVector[1];
-    let q3 = rotationVector[2];
-    if (rotationVector.length >= 4) {
-        q0 = rotationVector[3];
-    } else {
-        q0 = 1 - q1 * q1 - q2 * q2 - q3 * q3;
-        q0 = (q0 > 0) ? Math.sqrt(q0) : 0;
-    }
-    let sq_q1 = 2 * q1 * q1;
-    let sq_q2 = 2 * q2 * q2;
-    let sq_q3 = 2 * q3 * q3;
-    let q1_q2 = 2 * q1 * q2;
-    let q3_q0 = 2 * q3 * q0;
-    let q1_q3 = 2 * q1 * q3;
-    let q2_q0 = 2 * q2 * q0;
-    let q2_q3 = 2 * q2 * q3;
-    let q1_q0 = 2 * q1 * q0;
-    if (R.length == 9) {
-        R[0] = 1 - sq_q2 - sq_q3;
-        R[1] = q1_q2 - q3_q0;
-        R[2] = q1_q3 + q2_q0;
-        R[3] = q1_q2 + q3_q0;
-        R[4] = 1 - sq_q1 - sq_q3;
-        R[5] = q2_q3 - q1_q0;
-        R[6] = q1_q3 - q2_q0;
-        R[7] = q2_q3 + q1_q0;
-        R[8] = 1 - sq_q1 - sq_q2;
-    } else if (R.length == 16) {
-        R[0] = 1 - sq_q2 - sq_q3;
-        R[1] = q1_q2 - q3_q0;
-        R[2] = q1_q3 + q2_q0;
-        R[3] = 0.0;
-        R[4] = q1_q2 + q3_q0;
-        R[5] = 1 - sq_q1 - sq_q3;
-        R[6] = q2_q3 - q1_q0;
-        R[7] = 0.0;
-        R[8] = q1_q3 - q2_q0;
-        R[9] = q2_q3 + q1_q0;
-        R[10] = 1 - sq_q1 - sq_q2;
-        R[11] = 0.0;
-        R[12] = R[13] = R[14] = 0.0;
-        R[15] = 1.0;
-    }
-
-    return R;
-}
