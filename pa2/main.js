@@ -333,9 +333,9 @@ function init() {
 
     window.addEventListener('devicemotion', (event) => {
         let dt = 0.05;
-        rotation.x += GetRadiansFromDegree(event.rotationRate.beta) * dt;
-        rotation.y += GetRadiansFromDegree(event.rotationRate.gamma) * dt;
-        rotation.z += GetRadiansFromDegree(event.rotationRate.alpha) * dt;
+        rotation.x += GetRadiansFromDegree(event.rotationRate.alpha) * dt;
+        rotation.y += GetRadiansFromDegree(event.rotationRate.beta) * dt;
+        rotation.z += GetRadiansFromDegree(event.rotationRate.gamma) * dt;
     })
 
     spaceball = new TrackballRotator(canvas, draw, 0);
