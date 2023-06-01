@@ -2,23 +2,24 @@
 
 let gl;                         // The webgl context.
 let surface;                    // A surface model
+let sound;
 let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
 let height = 5;
 let p = 3;
-let length;
-let surfaceType;
-let inputData;
-let rotation = {x:0, y: 0, z:0};
-let position = {x:0, y: 0, z:0};
-var context;
-let soundFileName = "perfectSound.mp3";
-var playButton;
-let sound;
 let R = (height * height) / (2*p);
 let radius = 0.3;
 const PI = Math.PI;
+let length;
+let inputData;
+var playButton;
+let rotation = {x:0, y: 0, z:0};
+let position = {x:1, y: 0, z:0};
+var context;
+let soundFileName = "perfectSound.mp3";
+let source;
 let panner;
+let highpassFilter;
 
 function GetRadiansFromDegree(angle) {
     return angle * PI / 180;
@@ -99,6 +100,7 @@ function UpdateInputData()
     this.eyeSeparation = 80.0;;
     this.near = 10;
     this.surfaceType = true;
+    this.filter = true;
     this.lightPosition = -1;
     this.ratio = 1;
     this.far = 2000.0;
@@ -117,6 +119,7 @@ function UpdateInputData()
         this.fov = document.getElementById("FOV").value;
         this.near = document.getElementById("nearDistance").value - 0.0;
         this.surfaceType = document.getElementById('SurfaceType');
+        this.filter = document.getElementById('filter');
         this.lightPosition = document.getElementById('light');
         this.UpdateDataForSides();
     }
@@ -324,27 +327,21 @@ function initGL() {
 function CreateSound()
 {
     context = new window.AudioContext();
+    CreateHighpassFilter();
+    CreatePanner();
     const request = new XMLHttpRequest();
-    let source = context.createBufferSource();
+    source = context.createBufferSource();
     request.open("GET", soundFileName, true);
     request.responseType = "arraybuffer";
 
     request.onload = () => {
         const audioData = request.response;
 
-        context.decodeAudioData(audioData, (buffer) => {
-            panner = context.createPanner();
-            panner.panningModel = "HRTF";
-            panner.distanceModel = "inverse";
-            panner.refDistance = 1;
-            panner.maxDistance = 1000;
-            panner.rolloffFactor = 1;
-            panner.coneInnerAngle = 360;
-            panner.coneOuterAngle = 0;
-            panner.coneOuterGain = 0;
+        context.decodeAudioData(audioData, (buffer) => {          
 
             source.buffer = buffer;
-            source.connect(panner);
+            source.connect(highpassFilter);
+            highpassFilter.connect(panner);
             panner.connect(context.destination);
             source.loop = true;
         }, (err) => {alert(err)}
@@ -355,6 +352,26 @@ function CreateSound()
     source.start(0);
     playButton.disabled = true;
     playButton.style.display = 'none';
+}
+
+function CreateHighpassFilter()
+{
+    highpassFilter = context.createBiquadFilter();
+    highpassFilter.type = "highpass";
+    highpassFilter.frequency.value = 1500;
+}
+
+function CreatePanner()
+{
+    panner = context.createPanner();
+    panner.panningModel = "HRTF";
+    panner.distanceModel = "inverse";
+    panner.refDistance = 1;
+    panner.maxDistance = 1000;
+    panner.rolloffFactor = 1;
+    panner.coneInnerAngle = 360;
+    panner.coneOuterAngle = 0;
+    panner.coneOuterGain = 0;
 }
 
 /* Creates a program for use in the WebGL context gl, and returns the
@@ -418,53 +435,22 @@ function init() {
 
 
     window.addEventListener('devicemotion', (event) => {
-        let dt = 0.05;
-        position.x += GetRadiansFromDegree(event.rotationRate.alpha) * dt;
-        position.y += GetRadiansFromDegree(event.rotationRate.beta) * dt;
-        position.z += GetRadiansFromDegree(event.rotationRate.gamma) * dt;
+        if(panner)
+        {
+            let dt = 0.05;
+            position.x += GetRadiansFromDegree(event.rotationRate.alpha) * dt;
+            position.y += GetRadiansFromDegree(event.rotationRate.beta) * dt;
+            position.z += GetRadiansFromDegree(event.rotationRate.gamma) * dt;
 
-        rotation.x = R * Math.cos(position.y)*Math.cos(position.x);
-        rotation.y = height * Math.sin(position.y);
-        rotation.z = R * Math.cos(position.y)*Math.sin(position.z);
-        panner.setPosition(rotation.x, rotation.y, rotation.z);
-        panner.setOrientation(0,0,0);
-        sound.BufferData(CreateSoundData());
+            rotation.x = R * Math.cos(position.y)*Math.cos(position.x);
+            rotation.y = height * Math.sin(position.y);
+            rotation.z = R * Math.cos(position.y)*Math.sin(position.z);
+        
+            panner.setPosition(rotation.x, rotation.y, rotation.z);
+            panner.setOrientation(0,0,0);
+            sound.BufferData(CreateSoundData());
+        }
     })
-
-    document.addEventListener('keydown', function(event){
-        if(event.code == "KeyA")
-        {
-            position.x -= 0.01;
-
-        }
-        else if(event.code =="KeyD")
-        {
-            position.x += 0.01;
-        }
-
-        if(event.code == "KeyW")
-        {
-            position.y += 0.01;
-        }
-        else if(event.code == "KeyS")
-        {
-            position.y -= 0.01;
-        }
-        if(event.code == "KeyQ")
-        {
-            position.z -= 0.01;
-        }
-        else if(event.code == "KeyE")
-        {
-            position.z += 0.01;
-        }
-        rotation.x = R * Math.cos(position.y)*Math.cos(position.x);
-        rotation.y = height * Math.sin(position.y);
-        rotation.z = R * Math.cos(position.y)*Math.sin(position.z);
-        panner.setPosition(rotation.x, rotation.y, rotation.z);
-        panner.setOrientation(0,0,0);
-        sound.BufferData(CreateSoundData());
-    });
 
     playButton = document.getElementById("play-button");
     playButton.addEventListener('click', function(){
@@ -482,6 +468,7 @@ function Update()
 }
 
 function Redraw() {
+    highpassFilter.frequency.value = inputData.filter.checked ? 1500 : 0;  
     surface.BufferData(CreateSurfaceData());
     sound.BufferData(CreateSoundData());
     draw();
