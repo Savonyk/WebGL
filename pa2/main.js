@@ -10,9 +10,17 @@ let length;
 let surfaceType;
 let inputData;
 let rotation = {x:0, y: 0, z:0};
+let position = {x:0, y: 0, z:0};
+var context;
+let soundFileName = "perfectSound.mp3";
+var playButton;
+let sound;
+let R = (height * height) / (2*p);
+let radius = 0.3;
+const PI = Math.PI;
 
 function GetRadiansFromDegree(angle) {
-    return angle * Math.PI / 180;
+    return angle * PI / 180;
 }
 
 // Constructor
@@ -151,11 +159,7 @@ function draw() {
     let leftProjection = m4.orthographic(inputData.left, inputData.right,  inputData.bottom, inputData.top, inputData.near, inputData.far);
     inputData.UpdateSidesForRightProjection();
     let rightProjection = m4.orthographic(inputData.left, inputData.right,  inputData.bottom, inputData.top, inputData.near, inputData.far);
-
-    let modelView = m4.identity();
-    modelView = m4.xRotate(modelView, rotation.x);
-    modelView = m4.yRotate(modelView, rotation.y);
-    modelView = m4.zRotate(modelView, rotation.z);
+    let modelView = spaceball.getViewMatrix();
 
     let rotateToPointZero = m4.axisRotation([0.707,0.707,0], 0);
     let translateToPointZero = m4.translation(0,0,0);
@@ -187,24 +191,45 @@ function draw() {
     gl.uniform3fv(shProgram.iAmbientColor, [0.2, 0.1, 0.4]);
     gl.uniform3fv(shProgram.iDiffuseColor, [0.0, 0.8, 0.8]);
     gl.uniform3fv(shProgram.iSpecularColor, [1.0, 1.0, 1.0]);
-    gl.uniform4fv(shProgram.iColor, [0,0,0.8,1] );
     gl.uniform4fv(shProgram.iColor, [1,1,0,1] );
     gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, matAccumLeft);
     gl.uniformMatrix4fv(shProgram.iProjectionMatrix, false, leftProjection);
     gl.colorMask(true, false, false, false);
+
     surface.Draw();
+
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, matAccumRight);
+    gl.uniformMatrix4fv(shProgram.iProjectionMatrix, false, rightProjection);
+    gl.colorMask(false, true, true, false);
+
+    surface.Draw();
+    gl.colorMask(true, true, true, true);
+
+    gl.uniform1f(shProgram.iShininess, 10.0);
+    gl.uniform1f(shProgram.iAmbientCoefficient, 1);
+    gl.uniform1f(shProgram.iDiffuseCoefficient, 1);
+    gl.uniform1f(shProgram.iSpecularCoefficient, 1);
+
+    gl.uniform3fv(shProgram.iAmbientColor, [0.2, 0.1, 0.0]);
+    gl.uniform3fv(shProgram.iDiffuseColor, [1.0, 1.0, 0.0]);
+    gl.uniform3fv(shProgram.iSpecularColor, [1.0, 1.0, 1.0]);
+    gl.uniform4fv(shProgram.iColor, [1,1,0.0,1] );
+    gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, matAccumLeft);
+    gl.uniformMatrix4fv(shProgram.iProjectionMatrix, false, leftProjection);
+    gl.colorMask(true, false, false, false);
+    sound.Draw();
   
     gl.clear(gl.DEPTH_BUFFER_BIT);
   
     gl.uniformMatrix4fv(shProgram.iModelViewMatrix, false, matAccumRight);
     gl.uniformMatrix4fv(shProgram.iProjectionMatrix, false, rightProjection);
     gl.colorMask(false, true, true, false);
-    surface.Draw();
+    sound.Draw();
   
     gl.colorMask(true, true, true, true);
+
 }
-
-
 
 function GetCurrentZPosition(h){
     return Math.pow(Math.abs(h) - height, 2) / (2*p);
@@ -230,6 +255,27 @@ function CreateSurfaceData()
 
             vertexList.push(currentTemp * Math.cos(currentAngle), v, currentTemp * Math.sin(currentAngle));
             vertexList.push(currentTemp * Math.cos(nextAngle), v, currentTemp * Math.sin(nextAngle));
+        }
+    }
+
+    length = 360;
+    return vertexList;
+}
+
+function CreateSoundData()
+{
+    let vertexList = [];
+
+    const stepU = inputData.surfaceType.checked ? 1 : 4;
+
+    for (let u = 0; u < 360; u += stepU) 
+    {
+        for(let v = 0; v < 360; v += stepU)
+        {
+            let alpha = GetRadiansFromDegree(u);
+            let beta = GetRadiansFromDegree(v);
+
+            vertexList.push(rotation.x +  (radius *  Math.cos(alpha) * Math.sin(beta)),rotation.y + (radius *  Math.sin(alpha) * Math.sin(beta)),rotation.z + (radius *  Math.cos(beta)));
         }
     }
 
@@ -263,12 +309,40 @@ function initGL() {
     shProgram.iTMU                       = gl.getUniformLocation(prog, 'tmu'); 
 
 
+
     
     inputData = new UpdateInputData();
     inputData.UpdateData();
     surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
+    sound = new Model('Sound');
+    sound.BufferData(CreateSoundData());
     gl.enable(gl.DEPTH_TEST);
+}
+
+function CreateSound()
+{
+    context = new window.AudioContext();
+    const request = new XMLHttpRequest();
+    let source = context.createBufferSource();
+    request.open("GET", soundFileName, true);
+    request.responseType = "arraybuffer";
+
+    request.onload = () => {
+        const audioData = request.response;
+
+        context.decodeAudioData(audioData, (buffer) => {
+            source.buffer = buffer;
+            source.connect(context.destination);
+            source.loop = true;
+        }, (err) => {alert(err)}
+        );
+    };
+
+    request.send();
+    source.start(0);
+    playButton.disabled = true;
+    playButton.style.display = 'none';
 }
 
 /* Creates a program for use in the WebGL context gl, and returns the
@@ -336,12 +410,51 @@ function init() {
         rotation.x += GetRadiansFromDegree(event.rotationRate.alpha) * dt;
         rotation.y += GetRadiansFromDegree(event.rotationRate.beta) * dt;
         rotation.z += GetRadiansFromDegree(event.rotationRate.gamma) * dt;
+        sound.BufferData(CreateSoundData());
+
     })
 
+    document.addEventListener('keydown', function(event){
+        if(event.code == "KeyA")
+        {
+            position.x -= 0.01;
+
+        }
+        else if(event.code =="KeyD")
+        {
+            position.x += 0.01;
+        }
+
+        if(event.code == "KeyW")
+        {
+            position.y += 0.01;
+        }
+        else if(event.code == "KeyS")
+        {
+            position.y -= 0.01;
+        }
+        if(event.code == "KeyQ")
+        {
+            position.z -= 0.01;
+        }
+        else if(event.code == "KeyE")
+        {
+            position.z += 0.01;
+        }
+        rotation.x = R * Math.cos(position.y)*Math.cos(position.x);
+        rotation.y = height * Math.sin(position.y);
+        rotation.z = R * Math.cos(position.y)*Math.sin(position.z);
+        sound.BufferData(CreateSoundData());
+    });
+
+    playButton = document.getElementById("play-button");
+    playButton.addEventListener('click', function(){
+        
+                CreateSound();
+    });
     spaceball = new TrackballRotator(canvas, draw, 0);
     Update();
 }
-
 
 function Update()
 {
@@ -351,6 +464,7 @@ function Update()
 
 function Redraw() {
     surface.BufferData(CreateSurfaceData());
+    sound.BufferData(CreateSoundData());
     draw();
 }
 

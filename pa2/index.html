@@ -10,7 +10,6 @@
         background-color: #EEEEEE;
     }
 </style>
-
 <script src="./Utils/trackball-rotator.js"></script>
 <script src="./Utils/m4.js"></script>
 <script src="./shader.gpu"></script>
@@ -52,13 +51,16 @@
         <input id="nearDistance" type="range" min="5" max="20" step="0.25" value="10" >
     </div>
     <div>
-        <label for ="convergence">Convergence</label>
+        <label for="convergence">Convergence</label>
         <input id="convergence" type="range" min="500" max="2500" step="10" value="2000">
+    </div>
+    <br/>
+    <div>
+        <button id="play-button" type="button">Allow</button>
     </div>
 </div>
 
 <div id="canvas-holder">
    <canvas width="500" height="500" id="webglcanvas" style="background-color:red"></canvas>
 </div>
-
 </body></html>
