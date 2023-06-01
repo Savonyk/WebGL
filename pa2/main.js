@@ -18,6 +18,7 @@ let sound;
 let R = (height * height) / (2*p);
 let radius = 0.3;
 const PI = Math.PI;
+let panner;
 
 function GetRadiansFromDegree(angle) {
     return angle * PI / 180;
@@ -242,7 +243,7 @@ function CreateSurfaceData()
 {
     let vertexList = [];
 
-    const stepU = inputData.surfaceType.checked ? 0.5 : 2;
+    const stepU = inputData.surfaceType.checked ? 1 : 2;
     const stepV = inputData.surfaceType.checked ? 0.5 : 1;
 
     for (let u = 0; u < 360; u += stepU) 
@@ -266,11 +267,11 @@ function CreateSoundData()
 {
     let vertexList = [];
 
-    const stepU = inputData.surfaceType.checked ? 1 : 4;
+    const stepU = inputData.surfaceType.checked ? 5 : 9;
 
-    for (let u = 0; u < 360; u += stepU) 
+    for (let u = 0; u <= 360; u += stepU) 
     {
-        for(let v = 0; v < 360; v += stepU)
+        for(let v = 0; v <= 360; v += stepU)
         {
             let alpha = GetRadiansFromDegree(u);
             let beta = GetRadiansFromDegree(v);
@@ -332,8 +333,19 @@ function CreateSound()
         const audioData = request.response;
 
         context.decodeAudioData(audioData, (buffer) => {
+            panner = context.createPanner();
+            panner.panningModel = "HRTF";
+            panner.distanceModel = "inverse";
+            panner.refDistance = 1;
+            panner.maxDistance = 1000;
+            panner.rolloffFactor = 1;
+            panner.coneInnerAngle = 360;
+            panner.coneOuterAngle = 0;
+            panner.coneOuterGain = 0;
+
             source.buffer = buffer;
-            source.connect(context.destination);
+            source.connect(panner);
+            panner.connect(context.destination);
             source.loop = true;
         }, (err) => {alert(err)}
         );
@@ -407,11 +419,16 @@ function init() {
 
     window.addEventListener('devicemotion', (event) => {
         let dt = 0.05;
-        rotation.x += GetRadiansFromDegree(event.rotationRate.alpha) * dt;
-        rotation.y += GetRadiansFromDegree(event.rotationRate.beta) * dt;
-        rotation.z += GetRadiansFromDegree(event.rotationRate.gamma) * dt;
-        sound.BufferData(CreateSoundData());
+        position.x += GetRadiansFromDegree(event.rotationRate.alpha) * dt;
+        position.y += GetRadiansFromDegree(event.rotationRate.beta) * dt;
+        position.z += GetRadiansFromDegree(event.rotationRate.gamma) * dt;
 
+        rotation.x = R * Math.cos(position.y)*Math.cos(position.x);
+        rotation.y = height * Math.sin(position.y);
+        rotation.z = R * Math.cos(position.y)*Math.sin(position.z);
+        panner.setPosition(rotation.x, rotation.y, rotation.z);
+        panner.setOrientation(0,0,0);
+        sound.BufferData(CreateSoundData());
     })
 
     document.addEventListener('keydown', function(event){
@@ -444,6 +461,8 @@ function init() {
         rotation.x = R * Math.cos(position.y)*Math.cos(position.x);
         rotation.y = height * Math.sin(position.y);
         rotation.z = R * Math.cos(position.y)*Math.sin(position.z);
+        panner.setPosition(rotation.x, rotation.y, rotation.z);
+        panner.setOrientation(0,0,0);
         sound.BufferData(CreateSoundData());
     });
 
