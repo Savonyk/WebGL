@@ -20,11 +20,11 @@ let soundFileName = "perfectSound.mp3";
 let source;
 let panner;
 let highpassFilter;
+let defaultFrequency;
 
 function GetRadiansFromDegree(angle) {
     return angle * PI / 180;
 }
-
 // Constructor
 function Model(name) {
     this.name = name;
@@ -66,7 +66,6 @@ function Model(name) {
       };
 }
 
-
 // Constructor
 function ShaderProgram(name, program) {
 
@@ -92,7 +91,6 @@ function ShaderProgram(name, program) {
         gl.useProgram(this.prog);
     }
 }
-
 function UpdateInputData()
 {
     this.convergence = 2000.0;
@@ -148,10 +146,6 @@ function UpdateInputData()
     }
 }
 
-/* Draws a colored cube, along with a set of coordinate axes.
- * (Note that the use of the above drawPrimitive function is not an efficient
- * way to draw with WebGL.  Here, the geometry is so simple that it doesn't matter.)
- */
 function draw() {
     gl.clearColor(0,0,0,1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -358,6 +352,7 @@ function CreateHighpassFilter()
 {
     highpassFilter = context.createBiquadFilter();
     highpassFilter.type = "highpass";
+    defaultFrequency =  highpassFilter.frequency.value;
     highpassFilter.frequency.value = 1500;
 }
 
@@ -374,14 +369,6 @@ function CreatePanner()
     panner.coneOuterGain = 0;
 }
 
-/* Creates a program for use in the WebGL context gl, and returns the
- * identifier for that program.  If an error occurs while compiling or
- * linking the program, an exception of type Error is thrown.  The error
- * string contains the compilation or linking error.  If no error occurs,
- * the program identifier is the return value of the function.
- * The second and third parameters are strings that contain the
- * source code for the vertex shader and for the fragment shader.
- */
 function createProgram(gl, vShader, fShader) {
     let vsh = gl.createShader( gl.VERTEX_SHADER );
     gl.shaderSource(vsh,vShader);
@@ -448,7 +435,7 @@ function init() {
         
             panner.setPosition(rotation.x, rotation.y, rotation.z);
             panner.setOrientation(0,0,0);
-            sound.BufferData(CreateSoundData());
+            Redraw();
         }
     })
 
@@ -468,7 +455,7 @@ function Update()
 }
 
 function Redraw() {
-    highpassFilter.frequency.value = inputData.filter.checked ? 1500 : 0;  
+    highpassFilter.frequency.value = inputData.filter.checked ? 1500 : defaultFrequency;  
     surface.BufferData(CreateSurfaceData());
     sound.BufferData(CreateSoundData());
     draw();
