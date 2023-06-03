@@ -150,13 +150,13 @@ function draw() {
     gl.clearColor(0,0,0,1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    let orthographic = m4.orthographic(0, 1, 0,1, -1, 1); 
+    let orthographic = m4.frustum(0, 1, 0,1, -1, 1); 
     
     inputData.UpdateData();
     inputData.UpdateSidesForLeftProjection();
-    let leftProjection = m4.orthographic(inputData.left, inputData.right,  inputData.bottom, inputData.top, inputData.near, inputData.far);
+    let leftProjection = m4.frustum(inputData.left, inputData.right,  inputData.bottom, inputData.top, inputData.near, inputData.far);
     inputData.UpdateSidesForRightProjection();
-    let rightProjection = m4.orthographic(inputData.left, inputData.right,  inputData.bottom, inputData.top, inputData.near, inputData.far);
+    let rightProjection = m4.frustum(inputData.left, inputData.right,  inputData.bottom, inputData.top, inputData.near, inputData.far);
     let modelView = spaceball.getViewMatrix();
 
     let rotateToPointZero = m4.axisRotation([0.707,0.707,0], 0);
